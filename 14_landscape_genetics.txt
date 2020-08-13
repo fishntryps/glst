@@ -1,0 +1,141 @@
+
+#########################################################
+############# spatio-genetic correlations ###############
+#########################################################
+
+### subset VCF to Colombian + Venezuelan + Ecuadorian dataset
+
+java -jar /home/philipp/GenomeAnalysisTK.jar \
+-T SelectVariants \
+-R /home/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta \
+-sn COL133_rep1 \
+-sn COL135_rep1 \
+-sn COL154_rep1 \
+-sn COL155_rep1 \
+-sn COL169 \
+-sn COL319_rep1 \
+-sn COL466_rep1 \
+-sn COL468_rep1 \
+-sn COL77 \
+-sn COL78_rep1 \
+-sn ECU10_rep1 \
+-sn ECU36 \
+-sn ECU3_rep1 \
+-sn ECU41 \
+-sn ECU4_rep1 \
+-sn ECU77 \
+-sn ECU8 \
+-sn ECU9_rep1 \
+-sn TBM_2795_CL2_rep1 \
+-sn VZ1016B_rep1 \
+-sn VZ1214D \
+-sn VZ13516_rep1 \
+-sn VZ16816 \
+-sn VZ17114 \
+-sn VZ35814_rep1 \
+-sn VZ6616_rep1 \
+--excludeNonVariants \
+-V /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf -o /home/philipp/glst_merged/lg/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_georef.vcf
+
+### quick tree using alternate allele counts at biallelic sites (convert genotypes to 0-1-2 codes, i.e., 0 for 0/0 homozygous reference, 1 for 0/1 heterozygous reference / non-reference and 2 for 1/1 homozygous non-reference)
+
+/home/philipp/vcftools_0.1.13/bin/vcftools --vcf GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_georef.vcf --012 --out GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_georef
+
+### open R
+
+library(data.table)
+library(stringr)
+library(ape)
+library(phangorn)
+library(vegan)
+
+### read in alternate allele count data data
+
+tc <- fread('GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_georef.012', data.table = F)[,-1]
+rownames(tc) <- read.table('GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_georef.012.indv')[,1]
+positions <- read.table('GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_georef.012.pos')
+colnames(tc) <- gsub(' ','',apply(positions, 1, function(x) paste(x, collapse='_')))
+
+## missing data per individual and site
+
+missing.site <- apply(tc, 2, function(x) sum(x==-1))/nrow(tc)
+hist(missing.site)
+
+### keep only those sites that have no missing data, i.e., 'non-missing sites'
+
+tc.filter <- tc[names(missing.site[which(missing.site <= 0.1)])]
+
+### number of individuals and filtered sites
+
+dim(tc.filter)
+
+### Euclidean genetic distances
+
+gen_dist <- dist(tc.filter)
+
+### geographic distances using EPSG 3786 coordinates
+
+geo <- read.csv("glst_coords_count.csv", header=T)
+
+### combine
+
+rownames(geo) <- geo$ID
+geo[,1] <- NULL
+geo_dist <- dist(cbind(geo$xEPSG.3786,geo$yEPSG.3786))
+
+### plot cross-country correlation to PDF
+
+par(mfrow=c(1,1))
+pdf("cross_country.pdf", width=6, height=4)
+plot(geo_dist,gen_dist, bg="white", col="black", pch=21, cex=0.6, lwd=0.3, las=1, xlim=c(0,2200000), ylim=c(0,20), cex.axis=0.8)
+dev.off()
+
+### plot correlations color-coded by country to PDF
+
+pdf("per_country.pdf", width=6, height=4)
+col_geo <- geo[c(1:10),]
+col_geo_dist <- dist(cbind(col_geo$xEPSG.3786,col_geo$yEPSG.3786))
+col_tc.filter <- tc.filter[c(1:10),]
+col_gen_dist <- dist(col_tc.filter)
+plot(col_geo_dist,col_gen_dist, bg=rgb(0,1,0,alpha=1), pch=21, cex=0.9, xlim= c(0,206000), ylim=c(0,12), col="black", lwd=0.3,axes=F, las =1, cex.axis=0.8)
+
+par(new=T)
+
+ecu_geo <- geo[c(11:19),]
+ecu_geo_dist <- dist(cbind(ecu_geo$xEPSG.3786,ecu_geo$yEPSG.3786))
+ecu_tc.filter <- tc.filter[c(11:19),]
+ecu_gen_dist <- dist(ecu_tc.filter)
+plot(ecu_geo_dist,ecu_gen_dist, bg=rgb(0,1,1,alpha=1), pch=21, cex=0.9, xlim= c(0,206000), ylim=c(0,12), col="black", lwd=0.3,axes=F, las =1, cex.axis=0.8)
+
+par(new=T)
+
+vz_geo <- geo[c(20:26),]
+vz_geo_dist <- dist(cbind(vz_geo$xEPSG.3786,vz_geo$yEPSG.3786))
+vz_tc.filter <- tc.filter[c(20:26),]
+vz_gen_dist <- dist(vz_tc.filter)
+plot(vz_geo_dist,vz_gen_dist, bg=rgb(1,1,0,alpha=1), pch=21, cex=0.9, xlim= c(0,206000), ylim=c(0,12), col="black", lwd=0.3, las =1, cex.axis=0.8)
+
+dev.off()
+
+### Mantel test (within 250 km)
+
+geo <- read.csv("glst_coords_count.csv", header=T)
+rownames(geo) <- geo$ID
+geo[,1] <- NULL
+geo_dist <- dist(cbind(geo$xEPSG.3786,geo$yEPSG.3786))
+geo_dist[geo_dist > 250000] <- NA
+gen_dist <- dist(tc.filter)
+gen_dist[gen_dist < 4] <- NA
+mantel(geo_dist,gen_dist, na.rm=T)
+
+### Mantel test (within 150 km)
+
+geo <- read.csv("glst_coords_count.csv", header=T)
+rownames(geo) <- geo$ID
+geo[,1] <- NULL
+geo_dist <- dist(cbind(geo$xEPSG.3786,geo$yEPSG.3786))
+geo_dist[geo_dist > 150000] <- NA
+gen_dist <- dist(tc.filter)
+gen_dist[gen_dist < 2] <- NA
+mantel(geo_dist,gen_dist, na.rm=T)
+

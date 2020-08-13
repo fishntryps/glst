@@ -1,0 +1,77 @@
+
+############################################################################
+############# filter primer candidates by multiplexability #################
+############################################################################
+
+### concatenate BatchPrimer3 output
+
+for i in {1,2,3,4plus}
+do
+sed -i 's/^/'$i'\t/g' "$i"_*_results_table*
+done
+
+cat $(find ./ -name "*results_table*" | sort -V) > cruzi_multiplex_primers.txt
+
+### extract forward and reverse primers concatenated output
+
+grep FORWARD cruzi_multiplex_primers.txt | awk '{print $3"\tACACTGACGACATGGTTCTACA"$13}' > cruzi_multiplex_FORWARD_with_locus.txt
+grep REVERSE cruzi_multiplex_primers.txt | awk '{print "TACGGTAGCAGAGACTTGGTCT"$13}' > cruzi_multiplex_REVERSE.txt
+
+paste cruzi_multiplex_FORWARD_with_locus.txt cruzi_multiplex_REVERSE.txt > MultiPLX2_with_tags_with_locus.txt ### optional intermediate (else pipe straight to next step by awk)
+
+awk '{print NR"\t"$2"\t"$3}' MultiPLX2_with_tags_with_locus.txt > MultiPLX2_with_tags_no_locus.txt
+
+### calculate primer binding energies with MultiPLX2
+
+./cmultiplx -primers MultiPLX2_with_tags_no_locus.txt -calcscores 123 -savescores MultiPLX2_with_tags_no_locus_SCORES.txt
+
+### identify high-affinity partners (threshold = -12 kcal/mol)
+
+awk '$5<-12' MultiPLX2_with_tags_no_locus_SCORES.txt | awk '{print$1"\n"$2}' | sort -n | uniq -c | awk '{print $2"\t"$1}' | sort -n > affinity.txt
+
+### keep primers with with less than 20 high-affinity partners
+
+join affinity.txt MultiPLX2_with_tags_no_locus.txt | awk '$2<20' | awk '{print $1"\t"$3"\t"$4}' > gtest.txt
+
+### add info. to selected primers
+
+join affinity.txt MultiPLX2_with_tags_no_locus.txt | awk '{print $1"\t"$2"\t"$3"\t"$4}' > tempyy.txt
+
+grep FORWARD cruzi_multiplex_primers.txt | awk '{print NR"\t"$1"\t"$3"\t"$7"\t"$14}' | sed 's/-/\t/g' | sed 's/:/\t/g' | awk '{print $1"\t"$2"\t"$3":"($4+$6)-1"-"($4+$6+$7)-2}' > tempxx.txt
+
+join tempxx.txt tempyy.txt | awk '$4<20' | awk '{print $1"\t"$2"\t"$3"\t"$5"\t"$6}' > cruzi_PRIMERS_precise.txt
+
+\rm tempxx.txt
+\rm tempyy.txt
+
+#### print commands that tally primer sequence matches in pilot WGS
+
+awk ' {print $3}' gtest.txt | grep '^[ATCG]' $1 | rev | tr ATCG TAGC > MultiPLX2_with_tags_REV_reverse_complement.txt
+awk '{print $1"\t"$2}' gtest.txt > MultiPLX2_with_tags_FW.txt
+paste MultiPLX2_with_tags_FW.txt MultiPLX2_with_tags_REV_reverse_complement.txt | sed 's/ACACTGACGACATGGTTCTACA//g' | sed 's/AGACCAAGTCTCTGCTACCGTA//g' > temp_validation.txt
+
+\rm *FW.txt
+\rm *REV_reverse_complement.txt
+
+awk '{print "echo "$1"; zgrep -c "$2" /shared2/salmosim/philipp/r15/TBM_2824_CL1_fastq/*.fastq.gz"}' temp_validation.txt > check_FW.txt
+awk '{print "echo "$1"; zgrep -c "$3" /shared2/salmosim/philipp/r15/TBM_2824_CL1_fastq/*.fastq.gz"}' temp_validation.txt > check_REV.txt
+
+\rm temp_validation.txt
+
+### run tally scripts
+
+bash check_FW.txt > check_FW_results.txt &
+bash check_REV.txt > check_REV_results.txt &
+
+### remove primers with low tallies
+
+cat <(grep fastq.gz:0 -B2 check_FW_results.txt | grep -v fastq.gz | grep -v '^--') <(grep fastq.gz:0 -B2 check_REV_results.txt | grep -v fastq.gz | grep -v '^--') | sort -n | uniq | awk '{print "awk \x27\$1!="$1"\x27"}' | perl -pe "s/'\n/' | /g" | sed 's/| $/> FINAL_cruzi_PRIMERS_precise.txt/' | sed "s#^#cat cruzi_PRIMERS_precise.txt | sed '1i ID\tSNPs\tREGION\tFORWARD\tREVERSE' | #g"
+
+### add prefixes to final primer set
+
+cat <(grep 'FORWARD' FINAL_cruzi_PRIMERS_precise.txt) <(sed '1d' FINAL_cruzi_PRIMERS_precise.txt | sed 's/^/TC_LOJ_/g') > TC_LOJ_PRIMERS.txt
+
+#### count total bases (for quote from supplier)
+
+awk '{print $4$5}' TC_LOJ_PRIMERS.txt | sed '1d' | wc
+

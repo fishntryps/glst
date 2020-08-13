@@ -1,0 +1,81 @@
+
+##########################################################################################
+############# compare neighbor-joining from GLST-abridged WGS vs. full WGS ###############
+##########################################################################################
+
+### make bed file of GLST target regions
+
+cut -f3 /home/philipp/plextc_80_40_242435_63_423_sub30_try3/after_batchprimer/TC_LOJ_PRIMERS.txt | sed 's/:/\t/g' | sed 's/-/\t/g' | sed '1d' | sort -V > orig_targets.bed ### see script #2 for primer file
+
+### recode genotypes at biallelic sites to alternate allele count codes (0 for 0/0 homozygous reference, 1 for 0/1 heterozygous reference / non-reference and 2 for 1/1 homozygous non-reference)
+
+bedtools intersect -a PILOT_noFIX11_noFIX01.vcf -b orig_targets.bed -header > orig_targets.vcf ### see script #1 for VCF
+
+/opt/Soft/vcftools_0.1.13/bin/vcftools --vcf orig_targets.vcf --012 --out test ### GLST-abridged WGS
+
+/opt/Soft/vcftools_0.1.13/bin/vcftools --vcf PILOT.vcf --012 --out full ### full WGS
+
+### open R
+
+library(data.table)
+library(stringr)
+library(ape)
+library(phangorn)
+
+### read in alternate allele count data (GLST-abridged WGS) 
+
+tc <- fread('test.012', data.table = F)[,-1]
+rownames(tc) <- read.table('test.012.indv')[,1]
+positions <- read.table('test.012.pos')
+colnames(tc) <- gsub(' ','',apply(positions, 1, function(x) paste(x, collapse='_')))
+
+## missing data per individual and site
+
+missing.site <- apply(tc, 2, function(x) sum(x==-1))/nrow(tc)
+hist(missing.site)
+
+# keep only sites that have less than 40% missing data
+
+tc.filter <- tc[names(missing.site[which(missing.site < 0.4)])] 
+
+### number of individuals and filtered sites
+
+dim(tc.filter)
+
+### build tree from Euclidean distance matrix and  plot to PDF
+
+nj <- nj(dist(tc.filter))
+
+pdf("abr.pdf", width=8, height=6)
+plot(nj, 'u', cex = 0.7, no.margin=T, lab4ut="axial", rotate=150, tip.color="blue4", edge.color="blue4")
+dev.off()
+
+### read in alternate allele count data (full WGS) 
+
+tc <- fread('full.012', data.table = F)[,-1]
+rownames(tc) <- read.table('full.012.indv')[,1]
+positions <- read.table('full.012.pos')
+colnames(tc) <- gsub(' ','',apply(positions, 1, function(x) paste(x, collapse='_')))
+
+
+## missing data per individual and site
+
+missing.site <- apply(tc, 2, function(x) sum(x==-1))/nrow(tc)
+hist(missing.site)
+
+# keep only sites that have less than 40% missing data
+
+tc.filter <- tc[names(missing.site[which(missing.site < 0.4)])] 
+
+### number of individuals and filtered sites
+
+dim(tc.filter)
+
+### build tree from Euclidean distance matrix and  plot to PDF
+
+nj <- nj(dist(tc.filter))
+
+pdf("abr.pdf", width=8, height=6)
+plot(nj, 'u', cex = 0.7, no.margin=T, lab4ut="axial", rotate=90, tip.color="springgreen4", edge.color="springgreen4")
+dev.off()
+

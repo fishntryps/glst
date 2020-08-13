@@ -1,0 +1,184 @@
+
+#####################################################################
+############# add WGS references to amplicon analysis ###############
+#####################################################################
+
+### map and call variants from publicly available WGS reads (obtained via wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/..........)
+
+for i in "SRR3676274" "SRR3676265" "SRR6357355" "SRR1996502" "SRR831189" "SRR6357362" "SRR864236"; do
+
+bwa mem -t 20 -M -R "@RG\tID:L00X\tSM:"$i"\tLB:ILP\tPL:ILLUMINA" /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta "$i"_1.fastq.gz "$i"_2.fastq.gz > "$i"_PURE.sam
+
+samtools view -Sbh "$i"_PURE.sam | samtools sort - "$i"_PURE_sorted
+
+samtools index "$i"_PURE_sorted.bam
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -I "$i"_PURE_sorted.bam  -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -T RealignerTargetCreator -o "$i"_for_IndelRealigner.intervals
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -I "$i"_PURE_sorted.bam  -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -T IndelRealigner -targetIntervals "$i"_for_IndelRealigner.intervals -o "$i"_PURE_sorted_realigned.bam
+
+samtools index "$i"_PURE_sorted_realigned.bam
+
+java -jar $(which MarkDuplicates.jar) INPUT="$i"_PURE_sorted_realigned.bam OUTPUT="$i"_PURE_sorted_realigned_mdupl.bam METRICS_FILE="$i"_PURE_L00X_mdupl_metrics.txt
+
+samtools index "$i"_PURE_sorted_realigned_mdupl.bam
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T HaplotypeCaller -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -I "$i"_PURE_sorted_realigned_mdupl.bam --emitRefConfidence GVCF -o "$i".g.vcf -L /shared2/salmosim/philipp/glst_cruzi_trim/gatk_filtered/orig_targets.bed ### see script #3 for bed file
+
+done
+
+### merge with variants from amplicon dataset
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T GenotypeGVCFs -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta --variant ARMA18_CL1_rep1_MER.g.vcf --variant ARMA18_CL1_rep2_MER.g.vcf --variant CHACO9_COL15_MER.g.vcf --variant CHILE_C22_MER.g.vcf --variant CLBRENER_rep1_MER.g.vcf --variant CLBRENER_rep2_MER.g.vcf --variant COL133_rep1_MER.g.vcf --variant COL133_rep2_MER.g.vcf --variant COL135_rep1_MER.g.vcf --variant COL135_rep2_MER.g.vcf --variant COL154_rep1_MER.g.vcf --variant COL154_rep2_MER.g.vcf --variant COL155_rep1_MER.g.vcf --variant COL155_rep2_MER.g.vcf --variant COL169_MER.g.vcf --variant COL253_MER.g.vcf --variant COL319_rep1_MER.g.vcf --variant COL319_rep2_MER.g.vcf --variant COL466_rep1_MER.g.vcf --variant COL466_rep2_MER.g.vcf --variant COL466_rep3_MER.g.vcf --variant COL468_rep1_MER.g.vcf --variant COL468_rep2_MER.g.vcf --variant COL468_rep3_MER.g.vcf --variant COL77_MER.g.vcf --variant COL78_rep1_MER.g.vcf --variant COL78_rep2_MER.g.vcf --variant ECU10_rep1_MER.g.vcf --variant ECU10_rep2_MER.g.vcf --variant ECU36_MER.g.vcf --variant ECU3_rep1_MER.g.vcf --variant ECU3_rep2_MER.g.vcf --variant ECU41_MER.g.vcf --variant ECU4_rep1_MER.g.vcf --variant ECU4_rep2_MER.g.vcf --variant ECU77_MER.g.vcf --variant ECU8_MER.g.vcf --variant ECU9_rep1_MER.g.vcf --variant ECU9_rep2_MER.g.vcf --variant PARA7_CL3_MER.g.vcf --variant SAIMIRI3_CL8_MER.g.vcf --variant TBM_2795_CL2_rep1_MER.g.vcf --variant TBM_2795_CL2_rep2_MER.g.vcf --variant TBM_2795_CL2_rep3_MER.g.vcf --variant TBM_2795_CL2_rep4_MER.g.vcf --variant VZ1016B_rep1_MER.g.vcf --variant VZ1016B_rep2_MER.g.vcf --variant VZ1214D_MER.g.vcf --variant VZ13516_rep1_MER.g.vcf --variant VZ13516_rep2_MER.g.vcf --variant VZ16816_MER.g.vcf --variant VZ17114_MER.g.vcf --variant VZ35814_rep1_MER.g.vcf --variant VZ35814_rep2_MER.g.vcf --variant VZ6616_rep1_MER.g.vcf --variant VZ6616_rep2_MER.g.vcf --variant TBM_2795_CL2_wgs_PURE.g.vcf --variant SRR3676274.g.vcf --variant SRR3676265.g.vcf --variant SRR6357355.g.vcf --variant SRR1996502.g.vcf --variant SRR831189.g.vcf --variant SRR6357362.g.vcf -L /shared2/salmosim/philipp/glst_cruzi_trim/gatk_filtered/orig_targets.bed -o GLST_EXTRA.vcf ### see script #3 for bed file
+
+### apply previous filters
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk/GLST_EXTRA.vcf --filterExpression "DP < 10.0" --filterName "VminDepth"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10.vcf --filterExpression "MQ < 20.0" --filterName "minMapQual"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20_GT10.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20.vcf --genotypeFilterExpression "DP < 10.0" -G_filterName "GminDepth"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20_GT10_FS10.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20_GT10.vcf --filterExpression "FS > 10.0" -filterName "maxFS"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20_GT10_FS10_Q80.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20_GT10_FS10.vcf --filterExpression "QUAL < 80.0" -filterName "minQUAL"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T SelectVariants -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20_GT10_FS10_Q80_OPS.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20_GT10_FS10_Q80.vcf --excludeFiltered -selectType SNP --setFilteredGtToNocall
+
+sed -re 's_0/[1-3]:[1-9][0-9]{0,9},1:([1-9][0-9]{0,9}):_0/0:\1,0:\1:_g' /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20_GT10_FS10_Q80_OPS.vcf > /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20_GT10_FS10_Q80_OPS_HET1.vcf
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T SelectVariants -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta \
+--excludeNonVariants \
+-sn ARMA18_CL1_rep1 \
+-sn CHACO9_COL15 \
+-sn CHILE_C22 \
+-sn CLBRENER_rep1 \
+-sn CLBRENER_rep2 \
+-sn COL133_rep1 \
+-sn COL133_rep2 \
+-sn COL135_rep1 \
+-sn COL135_rep2 \
+-sn COL154_rep1 \
+-sn COL154_rep2 \
+-sn COL155_rep1 \
+-sn COL155_rep2 \
+-sn COL169 \
+-sn COL319_rep1 \
+-sn COL319_rep2 \
+-sn COL466_rep1 \
+-sn COL466_rep2 \
+-sn COL466_rep3 \
+-sn COL468_rep1 \
+-sn COL468_rep2 \
+-sn COL468_rep3 \
+-sn COL77 \
+-sn COL78_rep1 \
+-sn COL78_rep2 \
+-sn ECU10_rep1 \
+-sn ECU10_rep2 \
+-sn ECU36 \
+-sn ECU3_rep1 \
+-sn ECU3_rep2 \
+-sn ECU41 \
+-sn ECU4_rep1 \
+-sn ECU4_rep2 \
+-sn ECU77 \
+-sn ECU8 \
+-sn ECU9_rep1 \
+-sn ECU9_rep2 \
+-sn PARA7_CL3 \
+-sn SAIMIRI3_CL8 \
+-sn TBM_2795_CL2_rep1 \
+-sn TBM_2795_CL2_rep2 \
+-sn TBM_2795_CL2_rep3 \
+-sn TBM_2795_CL2_rep4 \
+-sn VZ1016B_rep1 \
+-sn VZ1016B_rep2 \
+-sn VZ1214D \
+-sn VZ13516_rep1 \
+-sn VZ13516_rep2 \
+-sn VZ16816 \
+-sn VZ17114 \
+-sn VZ35814_rep1 \
+-sn VZ35814_rep2 \
+-sn VZ6616_rep1 \
+-sn VZ6616_rep2 \
+-sn TBM_2795_CL2_wgs \
+-sn SRR3676274 \
+-sn SRR3676265 \
+-sn SRR6357355 \
+-sn SRR1996502 \
+-sn SRR831189 \
+-sn SRR6357362 \
+-o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit.vcf \
+--variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20_GT10_FS10_Q80_OPS_HET1.vcf 
+
+### exlude variants in primer binding site regions
+
+awk '{print $3"\t"length($4)"\t"length($5)}' /home/philipp/plextc_80_40_242435_63_423_sub30_try3/after_batchprimer/TC_LOJ_PRIMERS.txt | sed 's/\:/\t/g' | sed 's/\-/\t/g' | awk '{print $1"\t"$2+$4"\t"$3-$5}' | sed '1d' > ../trim_targets.bed
+
+cat trim_targets.bed ../gatk_filtered/accept.bed | sort -Vk 1,2 > for_merge.bed ### see script #6 for bed file
+
+bedtools merge -i for_merge.bed > trim_targets_and_accept.bed 
+
+bedtools intersect -a /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit.vcf -b trim_targets_and_accept.bed -header | uniq > /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_EXTRA_ready.vcf
+
+### quick tree using alternate allele counts at biallelic sites (convert genotypes to 0-1-2 codes, i.e., 0 for 0/0 homozygous reference, 1 for 0/1 heterozygous reference / non-reference and 2 for 1/1 homozygous non-reference)
+
+/opt/Soft/vcftools_0.1.13/bin/vcftools --vcf GLST_EXTRA_ready.vcf --012 --out GLST_EXTRA_ready
+
+### open R
+
+library(data.table)
+library(ape)
+
+### read in alternate allele count data
+
+tc <- fread('GLST_EXTRA_ready.012', data.table = F)[,-1]
+
+rownames(tc) <- read.table('GLST_EXTRA_ready.012.indv')[,1]
+positions <- read.table('GLST_EXTRA_ready.012.pos')
+colnames(tc) <- gsub(' ','',apply(positions, 1, function(x) paste(x, collapse='_')))
+## missing data per individual and site
+missing.site <- apply(tc, 2, function(x) sum(x==-1))/nrow(tc)
+hist(missing.site) # Most sites seem to miss around 20% of the called SNPs
+tc.filter <- tc[names(missing.site[which(missing.site == 0)])] # for now, I only keep those sites that have 0% missing data
+dim(tc.filter)
+
+tree <- nj(dist(tc.filter))
+
+## add extra DTU / origin / accession info. to tip labels
+
+tree$tip.label[40] <- "TcV - Bolivia - SRR1996502 "
+tree$tip.label[41] <- "TcIDOM - Colombia - SRR3676265"
+tree$tip.label[42] <- "TcIDOM - Venezuela - SRR3676274"
+tree$tip.label[43] <- "TcII - Brazil - SRR6357355"
+tree$tip.label[44] <- "TcII - Brazil - SRR6357362"
+tree$tip.label[45] <- "TcVI - Chile - SRR831189"
+tree$tip.label[46] <- "TcIII - Brazil - SRR864236"
+
+### save tree to PDF
+
+pdf("tree_extra.pdf", height=6, width=7)
+plot(tree, 'u', lab4ut='axial', cex=0.47, no.margin=T, tip.color=c(rep("black",39),rep("red", 6), rep("black", 16)), rotate=-30)
+dev.off()
+
+### exit R
+
+### check how het. sites in TcV/TcVI correspond to sites differing between TcII and TcIII
+
+/home/philipp/bcftools-1.3.1/bcftools query -s SRR6357355,ARMA18_CL1_rep1 -f '%CHROM\t%POS\t[%GT\t]\n' GLST_EXTRA_ready.vcf | awk '$2 != $3' | egrep -v '\./\.' | awk '{print $1"\t"$2"\t"$2}' > difs.bed
+
+for i in {"PARA7_CL3","CLBRENER_rep1","CLBRENER_rep2","CHACO9_COL15"}; do
+
+/home/philipp/bcftools-1.3.1/bcftools query -s "$i" -f '%CHROM\t%POS\t[%GT\t]\n' ../vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf | egrep -v '0/0|1/1|2/2|3/3' | egrep -v '\./\.' | awk '{print $1"\t"$2"\t"$2}'> "$i"_hets.bed
+
+bedtools intersect -a "$i"_hets.bed -b difs.bed > "$i"_hets_explained.bed
+
+uniq "$i"_hets.bed > "$i"_hets_explained_uniq.bed
+
+md5sum "$i"_hets.bed
+md5sum "$i"_hets_explained_uniq.bed 
+
+done
+

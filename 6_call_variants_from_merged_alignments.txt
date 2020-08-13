@@ -1,0 +1,214 @@
+
+#########################################################################################################################
+############## map reads and call variants from run 1 and run 2 combined (i.e., use merged .bam files)  #################
+#########################################################################################################################
+
+### merge .bam files from run1 and run 2
+
+ls /shared2/salmosim/philipp/glst_merged/*R1_001.fq.gz -1 | sed 's/_L001_R1_001.fq.gz//g' | sed 's_.*/__g' | while read i; do java -jar $(which MergeSamFiles.jar) I=/shared2/salmosim/philipp/glst1/"$i"_PURE_outputs/"$i"_PURE_sorted_realigned.bam  I=/shared2/salmosim/philipp/glst2/"$i"_PURE_outputs/"$i"_PURE_sorted_realigned.bam O=/shared2/salmosim/philipp/glst_merged/"$i"_sorted_realigned_merged.bam; done
+
+### summarize variant (and invariant) sites per sample in genomic variant call format (g.vcf) 
+
+cd /shared2/salmosim/philipp/glst_merged
+
+mkdir /shared2/salmosim/philipp/glst_merged/gatk
+
+ls -1 /shared2/salmosim/philipp/glst_merged/*_sorted_realigned_merged.bam | sed 's/_sorted_realigned_merged.bam//g' | sed 's_.*/__g' | while read i; do
+
+samtools index /shared2/salmosim/philipp/glst_merged/"$i"_sorted_realigned_merged.bam
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T HaplotypeCaller -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -I /shared2/salmosim/philipp/glst_merged/"$i"_sorted_realigned_merged.bam --emitRefConfidence GVCF -o /shared2/salmosim/philipp/glst_merged/gatk/"$i"_MER.g.vcf
+
+done
+
+### summarize total polymorphism in sample set (combined variant call format (.vcf))
+
+cd /shared2/salmosim/philipp/glst_merged/gatk
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T GenotypeGVCFs -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta --variant ARMA18_CL1_rep1_MER.g.vcf --variant ARMA18_CL1_rep2_MER.g.vcf --variant CHACO9_COL15_MER.g.vcf --variant CHILE_C22_MER.g.vcf --variant CLBRENER_rep1_MER.g.vcf --variant CLBRENER_rep2_MER.g.vcf --variant COL133_rep1_MER.g.vcf --variant COL133_rep2_MER.g.vcf --variant COL135_rep1_MER.g.vcf --variant COL135_rep2_MER.g.vcf --variant COL154_rep1_MER.g.vcf --variant COL154_rep2_MER.g.vcf --variant COL155_rep1_MER.g.vcf --variant COL155_rep2_MER.g.vcf --variant COL169_MER.g.vcf --variant COL253_MER.g.vcf --variant COL319_rep1_MER.g.vcf --variant COL319_rep2_MER.g.vcf --variant COL466_rep1_MER.g.vcf --variant COL466_rep2_MER.g.vcf --variant COL466_rep3_MER.g.vcf --variant COL468_rep1_MER.g.vcf --variant COL468_rep2_MER.g.vcf --variant COL468_rep3_MER.g.vcf --variant COL77_MER.g.vcf --variant COL78_rep1_MER.g.vcf --variant COL78_rep2_MER.g.vcf --variant ECU10_rep1_MER.g.vcf --variant ECU10_rep2_MER.g.vcf --variant ECU36_MER.g.vcf --variant ECU3_rep1_MER.g.vcf --variant ECU3_rep2_MER.g.vcf --variant ECU41_MER.g.vcf --variant ECU4_rep1_MER.g.vcf --variant ECU4_rep2_MER.g.vcf --variant ECU77_MER.g.vcf --variant ECU8_MER.g.vcf --variant ECU9_rep1_MER.g.vcf --variant ECU9_rep2_MER.g.vcf --variant PARA7_CL3_MER.g.vcf --variant SAIMIRI3_CL8_MER.g.vcf --variant TBM_2795_CL2_rep1_MER.g.vcf --variant TBM_2795_CL2_rep2_MER.g.vcf --variant TBM_2795_CL2_rep3_MER.g.vcf --variant TBM_2795_CL2_rep4_MER.g.vcf --variant VZ1016B_rep1_MER.g.vcf --variant VZ1016B_rep2_MER.g.vcf --variant VZ1214D_MER.g.vcf --variant VZ13516_rep1_MER.g.vcf --variant VZ13516_rep2_MER.g.vcf --variant VZ16816_MER.g.vcf --variant VZ17114_MER.g.vcf --variant VZ35814_rep1_MER.g.vcf --variant VZ35814_rep2_MER.g.vcf --variant VZ6616_rep1_MER.g.vcf --variant VZ6616_rep2_MER.g.vcf -L /shared2/salmosim/philipp/glst_cruzi_trim/gatk_filtered/orig_targets.bed -o GLST_MER.vcf see script #3 for bed file
+
+#### filter
+
+mkdir /shared2/salmosim/philipp/glst_merged/gatk_filtered
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk/GLST_MER.vcf --filterExpression "DP < 10.0" --filterName "VminDepth"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10.vcf --filterExpression "MQ < 20.0" --filterName "minMapQual"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20.vcf --genotypeFilterExpression "DP < 10.0" -G_filterName "GminDepth"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10.vcf --filterExpression "FS > 10.0" -filterName "maxFS"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10.vcf --filterExpression "QUAL < 80.0" -filterName "minQUAL"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T SelectVariants -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80.vcf --excludeFiltered -selectType SNP --setFilteredGtToNocall
+
+sed -re 's_0/[1-3]:[1-9][0-9]{0,9},1:([1-9][0-9]{0,9}):_0/0:\1,0:\1:_g' /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS.vcf > /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1.vcf
+
+### exclude ARMA18_CL1_rep2 and COL253 due to poor read-depth
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T SelectVariants -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta \
+--excludeNonVariants \
+-sn ARMA18_CL1_rep1 \
+-sn CHACO9_COL15 \
+-sn CHILE_C22 \
+-sn CLBRENER_rep1 \
+-sn CLBRENER_rep2 \
+-sn COL133_rep1 \
+-sn COL133_rep2 \
+-sn COL135_rep1 \
+-sn COL135_rep2 \
+-sn COL154_rep1 \
+-sn COL154_rep2 \
+-sn COL155_rep1 \
+-sn COL155_rep2 \
+-sn COL169 \
+-sn COL319_rep1 \
+-sn COL319_rep2 \
+-sn COL466_rep1 \
+-sn COL466_rep2 \
+-sn COL466_rep3 \
+-sn COL468_rep1 \
+-sn COL468_rep2 \
+-sn COL468_rep3 \
+-sn COL77 \
+-sn COL78_rep1 \
+-sn COL78_rep2 \
+-sn ECU10_rep1 \
+-sn ECU10_rep2 \
+-sn ECU36 \
+-sn ECU3_rep1 \
+-sn ECU3_rep2 \
+-sn ECU41 \
+-sn ECU4_rep1 \
+-sn ECU4_rep2 \
+-sn ECU77 \
+-sn ECU8 \
+-sn ECU9_rep1 \
+-sn ECU9_rep2 \
+-sn PARA7_CL3 \
+-sn SAIMIRI3_CL8 \
+-sn TBM_2795_CL2_rep1 \
+-sn TBM_2795_CL2_rep2 \
+-sn TBM_2795_CL2_rep3 \
+-sn TBM_2795_CL2_rep4 \
+-sn VZ1016B_rep1 \
+-sn VZ1016B_rep2 \
+-sn VZ1214D \
+-sn VZ13516_rep1 \
+-sn VZ13516_rep2 \
+-sn VZ16816 \
+-sn VZ17114 \
+-sn VZ35814_rep1 \
+-sn VZ35814_rep2 \
+-sn VZ6616_rep1 \
+-sn VZ6616_rep2 \
+-o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit.vcf \
+--variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1.vcf 
+
+### list reliable SNP sites, i.e., those called using run 1 data and called again using run 2 data 
+
+grep -v '#' /shared2/salmosim/philipp/glst1/gatk/GLST_CRUZI.vcf | awk '{print $1"\t"$2"\t"$2}' > /shared2/salmosim/philipp/glst_merged/gatk_filtered/glst1.bed
+grep -v '#' /shared2/salmosim/philipp/glst2/gatk/GLST_CRUZI.vcf | awk '{print $1"\t"$2"\t"$2}' > /shared2/salmosim/philipp/glst_merged/gatk_filtered/glst2.bed
+
+### also list SNPs called using WGS (Schwabl et al. 2019, Nat. Commun.)
+
+grep -v '#' /shared2/salmosim/philipp/glst_cruzi_trim/gatk_filtered/orig_targets.vcf | awk '{print $1"\t"$2"\t"$2}' > /shared2/salmosim/philipp/glst_merged/gatk_filtered/orig.bed ## see script #3 for VCF
+
+### combined these lists of reliable sites into a common .bed file 
+
+bedtools intersect -a /shared2/salmosim/philipp/glst_merged/gatk_filtered/glst1.bed -b /shared2/salmosim/philipp/glst_merged/gatk_filtered/glst2.bed > /shared2/salmosim/philipp/glst_merged/gatk_filtered/intersect.bed
+cat /shared2/salmosim/philipp/glst_merged/gatk_filtered/intersect.bed /shared2/salmosim/philipp/glst_merged/gatk_filtered/orig.bed | sort -V | uniq > /shared2/salmosim/philipp/glst_merged/gatk_filtered/accept.bed ### clean up after using bedtools merge (optional)
+
+### intersect the filtered VCF with the .bed list of reliable sites
+
+bedtools intersect -a /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit.vcf -b /shared2/salmosim/philipp/glst_merged/gatk_filtered/accept.bed -header | uniq > /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf
+
+### generate VCF that includes WGS-based TBM_2795_CL2_wgs_PURE.g.vcf (Schwabl et al. 2019, Nat. Commun.)
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T GenotypeGVCFs -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta --variant ARMA18_CL1_rep1_MER.g.vcf --variant ARMA18_CL1_rep2_MER.g.vcf --variant CHACO9_COL15_MER.g.vcf --variant CHILE_C22_MER.g.vcf --variant CLBRENER_rep1_MER.g.vcf --variant CLBRENER_rep2_MER.g.vcf --variant COL133_rep1_MER.g.vcf --variant COL133_rep2_MER.g.vcf --variant COL135_rep1_MER.g.vcf --variant COL135_rep2_MER.g.vcf --variant COL154_rep1_MER.g.vcf --variant COL154_rep2_MER.g.vcf --variant COL155_rep1_MER.g.vcf --variant COL155_rep2_MER.g.vcf --variant COL169_MER.g.vcf --variant COL253_MER.g.vcf --variant COL319_rep1_MER.g.vcf --variant COL319_rep2_MER.g.vcf --variant COL466_rep1_MER.g.vcf --variant COL466_rep2_MER.g.vcf --variant COL466_rep3_MER.g.vcf --variant COL468_rep1_MER.g.vcf --variant COL468_rep2_MER.g.vcf --variant COL468_rep3_MER.g.vcf --variant COL77_MER.g.vcf --variant COL78_rep1_MER.g.vcf --variant COL78_rep2_MER.g.vcf --variant ECU10_rep1_MER.g.vcf --variant ECU10_rep2_MER.g.vcf --variant ECU36_MER.g.vcf --variant ECU3_rep1_MER.g.vcf --variant ECU3_rep2_MER.g.vcf --variant ECU41_MER.g.vcf --variant ECU4_rep1_MER.g.vcf --variant ECU4_rep2_MER.g.vcf --variant ECU77_MER.g.vcf --variant ECU8_MER.g.vcf --variant ECU9_rep1_MER.g.vcf --variant ECU9_rep2_MER.g.vcf --variant PARA7_CL3_MER.g.vcf --variant SAIMIRI3_CL8_MER.g.vcf --variant TBM_2795_CL2_rep1_MER.g.vcf --variant TBM_2795_CL2_rep2_MER.g.vcf --variant TBM_2795_CL2_rep3_MER.g.vcf --variant TBM_2795_CL2_rep4_MER.g.vcf --variant VZ1016B_rep1_MER.g.vcf --variant VZ1016B_rep2_MER.g.vcf --variant VZ1214D_MER.g.vcf --variant VZ13516_rep1_MER.g.vcf --variant VZ13516_rep2_MER.g.vcf --variant VZ16816_MER.g.vcf --variant VZ17114_MER.g.vcf --variant VZ35814_rep1_MER.g.vcf --variant VZ35814_rep2_MER.g.vcf --variant VZ6616_rep1_MER.g.vcf --variant VZ6616_rep2_MER.g.vcf --variant TBM_2795_CL2_wgs_PURE.g.vcf -L /shared2/salmosim/philipp/glst_cruzi_trim/gatk_filtered/orig_targets.bed -o GLST_MER_WGS.vcf
+
+#### filter
+
+mkdir /shared2/salmosim/philipp/glst_merged/gatk_filtered
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk/GLST_MER_WGS.vcf --filterExpression "DP < 10.0" --filterName "VminDepth"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10.vcf --filterExpression "MQ < 20.0" --filterName "minMapQual"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20.vcf --genotypeFilterExpression "DP < 10.0" -G_filterName "GminDepth"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10_FS10.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10.vcf --filterExpression "FS > 10.0" -filterName "maxFS"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T VariantFiltration -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10_FS10.vcf --filterExpression "QUAL < 80.0" -filterName "minQUAL"
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T SelectVariants -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS.vcf --variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80.vcf --excludeFiltered -selectType SNP --setFilteredGtToNocall
+
+sed -re 's_0/[1-3]:[1-9][0-9]{0,9},1:([1-9][0-9]{0,9}):_0/0:\1,0:\1:_g' /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS.vcf > /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1.vcf
+
+### exclude ARMA18_CL1_rep2 and COL253 due to poor read-depth
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T SelectVariants -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta \
+--excludeNonVariants \
+-sn ARMA18_CL1_rep1 \
+-sn CHACO9_COL15 \
+-sn CHILE_C22 \
+-sn CLBRENER_rep1 \
+-sn CLBRENER_rep2 \
+-sn COL133_rep1 \
+-sn COL133_rep2 \
+-sn COL135_rep1 \
+-sn COL135_rep2 \
+-sn COL154_rep1 \
+-sn COL154_rep2 \
+-sn COL155_rep1 \
+-sn COL155_rep2 \
+-sn COL169 \
+-sn COL319_rep1 \
+-sn COL319_rep2 \
+-sn COL466_rep1 \
+-sn COL466_rep2 \
+-sn COL466_rep3 \
+-sn COL468_rep1 \
+-sn COL468_rep2 \
+-sn COL468_rep3 \
+-sn COL77 \
+-sn COL78_rep1 \
+-sn COL78_rep2 \
+-sn ECU10_rep1 \
+-sn ECU10_rep2 \
+-sn ECU36 \
+-sn ECU3_rep1 \
+-sn ECU3_rep2 \
+-sn ECU41 \
+-sn ECU4_rep1 \
+-sn ECU4_rep2 \
+-sn ECU77 \
+-sn ECU8 \
+-sn ECU9_rep1 \
+-sn ECU9_rep2 \
+-sn PARA7_CL3 \
+-sn SAIMIRI3_CL8 \
+-sn TBM_2795_CL2_rep1 \
+-sn TBM_2795_CL2_rep2 \
+-sn TBM_2795_CL2_rep3 \
+-sn TBM_2795_CL2_rep4 \
+-sn VZ1016B_rep1 \
+-sn VZ1016B_rep2 \
+-sn VZ1214D \
+-sn VZ13516_rep1 \
+-sn VZ13516_rep2 \
+-sn VZ16816 \
+-sn VZ17114 \
+-sn VZ35814_rep1 \
+-sn VZ35814_rep2 \
+-sn VZ6616_rep1 \
+-sn VZ6616_rep2 \
+-sn TBM_2795_CL2_wgs \
+-o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit.vcf \
+--variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1.vcf 
+
+### intersect the filtered VCF with the .bed list of reliable sites
+
+bedtools intersect -a /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit.vcf -b /shared2/salmosim/philipp/glst_merged/gatk_filtered/accept.bed -header | uniq > /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf
+

@@ -1,0 +1,46 @@
+
+###################################################################
+############## heterozygosity and polyallelic sites ###############
+###################################################################
+
+### get alternate allele frequency for each individual at all biallelic sites
+
+for i in {10..63}; do cut -f5,"$i" /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf | grep -v '##' | egrep -v '[ACGT]\,[ACGT]' | cut -f2 > temp.txt; ind=$(head -1 temp.txt); egrep '0/1:[0-9,]{1,9}:[1-9][0-9]{1,3}' temp.txt -o | sed 's/\,0\:/:/g'  | sed 's_0/1\:__g' | sed 's/:.*//g' | sed 's/,/\t/g' | awk '{print $2/($1+$2)"\t"$1+$2}' | sort -nk1,1 > $ind.txt; done
+
+### open R
+
+### median allele frequencies of het.genotypes at biallelic sites
+
+v <- c()
+for (i in c("ARMA18_CL1_rep1","CHACO9_COL15","CHILE_C22","CLBRENER_rep1","CLBRENER_rep2","COL133_rep1","COL133_rep2","COL135_rep1","COL135_rep2","COL154_rep1","COL154_rep2","COL155_rep1","COL155_rep2","COL169","COL319_rep1","COL319_rep2","COL466_rep1","COL466_rep2","COL466_rep3","COL468_rep1","COL468_rep2","COL468_rep3","COL77","COL78_rep1","COL78_rep2","ECU10_rep1","ECU10_rep2","ECU36","ECU3_rep1","ECU3_rep2","ECU41","ECU4_rep1","ECU4_rep2","ECU77","ECU8","ECU9_rep1","ECU9_rep2","PARA7_CL3","SAIMIRI3_CL8","TBM_2795_CL2_rep1","TBM_2795_CL2_rep2","TBM_2795_CL2_rep3","TBM_2795_CL2_rep4","VZ1016B_rep1","VZ1016B_rep2","VZ1214D","VZ13516_rep1","VZ13516_rep2","VZ16816","VZ17114","VZ35814_rep1","VZ35814_rep2","VZ6616_rep1","VZ6616_rep2")){
+x <- read.table(paste(i,'.txt', sep=''), header=F)
+v[i] <- median(x$V1)}
+
+freqs <- data.frame(v)
+
+## exit R
+
+### het. genotypes per sample
+
+grep CHROM /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | while read i; do;\necho "$i"xxx\n\n/opt/Soft/vcftools_0.1.13/bin/vcftools --vcf /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf --indv "$i" --stdout --recode --recode-INFO-all | egrep '(0\/1\:|0\/2\:|0\/3\:|1\/2\:|1\/3\:|2\/3\:)' | grep -v '\.\/\.:' | grep -vc '#'  \n\ndone | perl -pe 's/xxx\n/\t/g' > HET.txt
+cat HET.txt
+
+### egrep -v 'rep[2-4]' HET.txt > HET_noreps.txt
+
+### manually add column designating 'TcVI'
+
+### egrep -v 'rep[2-4]|TcVI' HET.txt > HET_noreps_noTcVI.txt
+
+### total polymorphic genotypes per sample
+
+grep CHROM /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | while read i; do;\necho "$i"xxx\n\n/opt/Soft/vcftools_0.1.13/bin/vcftools --vcf /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf --indv "$i" --stdout --recode --recode-INFO-all | egrep '[0-3]/[1-3]\:' | grep -vc '#'  \n\ndone | perl -pe 's/xxx\n/\t/g' > POLY.txt
+
+### sites with reads representing >2 alleles (rerun GATK variant calling with -ploidy set to 4)
+
+ls -1 /shared2/salmosim/philipp/glst_merged/*_sorted_realigned_merged.bam | sed 's/_sorted_realigned_merged.bam//g' | sed 's_.*/__g' | while read i; do java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T HaplotypeCaller -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -I /shared2/salmosim/philipp/glst_merged/"$i"_sorted_realigned_merged.bam --emitRefConfidence BP_RESOLUTION -ploidy 4 -o /shared2/salmosim/philipp/glst_merged/gatk/"$i"_PLO.g.vcf -L /shared2/salmosim/philipp/glst_cruzi_trim/gatk_filtered/orig_targets.bed; done ### see script #3 for bed file
+
+ls -1 /shared2/salmosim/philipp/glst_merged/*_sorted_realigned_merged.bam | sed 's/_sorted_realigned_merged.bam//g' | sed 's_.*/__g' | while read i; do
+grep -vc '#' /shared2/salmosim/philipp/glst_merged/gatk/"$i"_PLO.g.vcf | awk '{print "'$i'\t"$0}' > tot.txt; 
+grep -v '#' /shared2/salmosim/philipp/glst_merged/gatk/"$i"_PLO.g.vcf | while read line; do
+echo "$line" | egrep './././.\:[0-9,]{1,100}:' -o | sed 's_./././.__g' | egrep '[0-9]{1,100}' -o | awk '$0 > 0' | wc -l; done | awk '$0 > 2' | wc -l | paste tot.txt -; done | awk '{print $1"\t"$3"\t"$2"\t"$3/$2}' | sort -k1,1 | sed '1isample\tmulti\ttot_sites\tfrac' > multi_rates.txt
+

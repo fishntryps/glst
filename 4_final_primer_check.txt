@@ -1,0 +1,92 @@
+
+##########################################################################################################################
+############# visualize target polymorphism in WGS pilot sample (final check before primer panel purchase) ###############
+##########################################################################################################################
+
+### get target intervals from final primer file
+
+awk '{print $3}' TC_LOJ_PRIMERS.txt | sed '1d' > tot.intervals ### see script #2 for primer file
+
+cat tot.intervals | while read line; do
+
+echo "$line" > "$line".intervals
+
+done
+
+### split VCF from script #1 into single-sample VCFs
+
+grep CHROM PILOT_noFIX11_noFIX01.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | while read line; do
+
+echo "$line" > "$line"_for_fasta.txt
+
+/opt/Soft/vcftools_0.1.13/bin/vcftools --vcf PILOT_noFIX11_noFIX01.vcf --keep  "$line"_for_fasta.txt --recode --recode-INFO-all --stdout | grep '#\|0/1:\|1/1:.*0/0:\|0/0:.*1/1:' > "$line".vcf
+
+\rm "$line"_for_fasta.txt
+
+done
+
+### create fastas for each sample at each target
+
+grep CHROM PILOT_noFIX11_noFIX01.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | while read line; do
+
+cat tot.intervals | while read target; do
+
+java -jar /home/philipp/GenomeAnalysisTK.jar -T FastaAlternateReferenceMaker -L "$target".intervals -R /home/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta -o "$line"_"$target".fasta --variant "$line".vcf
+
+done
+
+\rm "$line".vcf
+\rm "$line".vcf.idx
+
+done
+
+#### combine fastas per target
+
+cat tot.intervals | while read target; do
+
+cat *_"$target".fasta > "$target"_tot.fasta
+
+\rm *_"$target".fasta
+
+done
+
+### create and run command to insert sample names
+
+ls *_tot.fasta | awk '{print "sed \x27s/>1/>>1/g\x27 "$0" | awk \x27{for(x=1;x<=NF;x++)if(\$x~/>1/){sub(/>1/,++i)}}1\x27 > final_"$0}' | bash
+
+### print color-coded alignments for each target with seaview
+
+ls final_*_tot.fasta | while read i; do
+
+/opt/Soft/seaview/seaview -landscape -fontsize 7 -blocksize 200 -printout -o "$i".pdf "$i"; done
+
+### subset VCF to target regions and recode genotypes at biallelic sites to alternate allele count codes (0 for 0/0 homozygous reference, 1 for 0/1 heterozygous reference / non-reference and 2 for 1/1 homozygous non-reference)
+
+sed 's/:/\t/g' tot.intervals | sed 's/-/\t/g' > targets.bed
+
+bedtools intersect -a PILOT_noFIX11_noFIX01.vcf -b  targets.bed -header > PILOT_targets.vcf
+
+/opt/Soft/vcftools_0.1.13/bin/vcftools --vcf PILOT_targets.vcf --012 --out PILOT_targets
+
+### open R for a quick PCoA
+
+library(data.table)
+library(stringr)
+library(ape)
+library(phangorn)
+
+### read in allele count data
+
+tc <- fread('PILOT_targets.012', data.table = F)[,-1]
+rownames(tc) <- read.table('PILOT_targets.012.indv')[,1]
+positions <- read.table('PILOT_targets.012.pos')
+colnames(tc) <- gsub(' ','',apply(positions, 1, function(x) paste(x, collapse='_')))
+
+### plot PCoA from Euclidean distance matrix to PDF
+
+cmd <- cmdscale(dist(tc))
+
+pdf('cruziplex_target_pcoa.pdf', useDingbats = F, width = 15, height = 15)
+plot(cmd, pch = 16, xlab = 'x', ylab = 'y', cex = 1.2)
+dev.off()
+

@@ -1,0 +1,51 @@
+
+############################################################################
+############## allelic differences (AD) between replicates #################
+############################################################################
+
+### use only sites with no missing genotypes
+
+/opt/Soft/vcftools_0.1.13/bin/vcftools --vcf ../vcf/GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf --max-missing 1 --recode --recode-INFO-all --out GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD
+
+### AD between replicate 1 and other replicates
+
+grep CHROM GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | egrep '(_rep|_wgs)' | sed 's/_rep.*/_/g' | sed 's/_wgs.*/_/g' | while read i; do
+grep CHROM GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | grep $i | while read j; do 
+grep CHROM GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | grep $i | grep -v $j | while read k; do 
+echo $j"\t"$k"xxx"
+/home/philipp/bcftools-1.3.1/bcftools query -s "$j","$k" -f '%POS\t[%GT\t]\n' GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$2!=$4' | cat - <(/home/philipp/bcftools-1.3.1/bcftools query -s "$j","$k" -f '%POS\t[%GT\t]\n' GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$3!=$5') | wc -l
+done; done; done | perl -pe 's/xxx\n/\t/g' | sort | uniq | awk '$1 ~ /rep1/ { print }' > part1.txt
+
+### remaining comparisons for replicate 2 (relevant only for TBM_2795_CL2, COL466 and COL468)
+
+grep CHROM GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | egrep '(_rep|_wgs)' | sed 's/_rep.*/_/g' | sed 's/_wgs.*/_/g' | while read i; do
+grep CHROM GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | grep $i | while read j; do 
+grep CHROM GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | grep $i | grep -v $j | while read k; do 
+echo $j"\t"$k"xxx"
+/home/philipp/bcftools-1.3.1/bcftools query -s "$j","$k" -f '%POS\t[%GT\t]\n' GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$2!=$4' | cat - <(/home/philipp/bcftools-1.3.1/bcftools query -s "$j","$k" -f '%POS\t[%GT\t]\n' GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$3!=$5') | wc -l
+done; done; done | perl -pe 's/xxx\n/\t/g' | sort | uniq | awk '$1 ~ /rep2/ { print }' | awk '$2 !~ /rep1/ { print }' > part2.txt
+
+### remaining comparisons for replicate 3 (relevant only for TBM_2795_CL2)
+
+grep CHROM GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | egrep '(_rep|_wgs)' | sed 's/_rep.*/_/g' | sed 's/_wgs.*/_/g' | while read i; do
+grep CHROM GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | grep $i | while read j; do 
+grep CHROM GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | grep $i | grep -v $j | while read k; do 
+echo $j"\t"$k"xxx"
+/home/philipp/bcftools-1.3.1/bcftools query -s "$j","$k" -f '%POS\t[%GT\t]\n' GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$2!=$4' | cat - <(/home/philipp/bcftools-1.3.1/bcftools query -s "$j","$k" -f '%POS\t[%GT\t]\n' GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$3!=$5') | wc -l
+done; done; done | perl -pe 's/xxx\n/\t/g' | sort | uniq | awk '$1 ~ /rep3/ { print }' | awk '$2 !~ /rep1/ { print }' | awk '$2 !~ /rep2/ { print }' > part3.txt
+
+### remaining comparisons for replicate 4 (relevant only for TBM_2795_CL2)
+
+grep CHROM GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | egrep '(_rep|_wgs)' | sed 's/_rep.*/_/g' | sed 's/_wgs.*/_/g' | while read i; do
+grep CHROM GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | grep $i | while read j; do 
+grep CHROM GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | grep $i | grep -v $j | while read k; do 
+echo $j"\t"$k"xxx"
+/home/philipp/bcftools-1.3.1/bcftools query -s "$j","$k" -f '%POS\t[%GT\t]\n' GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$2!=$4' | cat - <(/home/philipp/bcftools-1.3.1/bcftools query -s "$j","$k" -f '%POS\t[%GT\t]\n' GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$3!=$5') | wc -l
+done; done; done | perl -pe 's/xxx\n/\t/g' | sort | uniq | awk '$1 ~ /rep4/ { print }' | awk '$2 !~ /rep1/ { print }' | awk '$2 !~ /rep2/ { print }' | awk '$2 !~ /rep3/ { print }' > part4.txt
+
+### combine
+
+cat part{1,2,3,4}.txt | sort -Vk3,3 > GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD_repeatability_multiallelic.txt
+
+\rm part*.txt
+

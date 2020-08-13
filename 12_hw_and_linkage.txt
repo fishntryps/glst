@@ -1,0 +1,76 @@
+
+##################################################################
+############## Hardy-Weinberg and linkage values #################
+##################################################################
+
+### subset Colombian samples
+
+java -jar /home/philipp/GenomeAnalysisTK.jar \
+-T SelectVariants \
+-R /home/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta \
+-sn COL133_rep1 \
+-sn COL135_rep1 \
+-sn COL154_rep1 \
+-sn COL155_rep1 \
+-sn COL169 \
+-sn COL319_rep1 \
+-sn COL466_rep1 \
+-sn COL468_rep1 \
+-sn COL77 \
+-sn COL78_rep1 \
+--excludeNonVariants \
+-V /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf -o /home/philipp/glst_merged/link/col.vcf
+
+### get HW
+
+/home/philipp/vcftools_0.1.13/bin/vcftools --vcf col.vcf --hwe 0.05 ### "After filtering, kept 169 out of a possible 175 Sites"
+
+### subset Venezuelan samples
+
+java -jar /home/philipp/GenomeAnalysisTK.jar \
+-T SelectVariants \
+-R /home/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta \
+-sn COL133_rep1 \
+-sn VZ1016B_rep1 \
+-sn VZ1214D \
+-sn VZ13516_rep1 \
+-sn VZ16816 \
+-sn VZ17114 \
+-sn VZ35814_rep1 \
+-sn VZ6616_rep1 \
+--excludeNonVariants \
+-V /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf -o /home/philipp/glst_merged/link/vz.vcf
+
+### get HW
+
+/home/philipp/vcftools_0.1.13/bin/vcftools --vcf vz.vcf --hwe 0.05 ### "After filtering, kept 143 out of a possible 147 Sites"
+
+### subset Ecuadorian samples
+
+java -jar /home/philipp/GenomeAnalysisTK.jar \
+-T SelectVariants \
+-R /home/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta \
+-sn ECU10_rep1 \
+-sn ECU36 \
+-sn ECU3_rep1 \
+-sn ECU41 \
+-sn ECU4_rep1 \
+-sn ECU77 \
+-sn ECU8 \
+-sn ECU9_rep1 \
+-sn TBM_2795_CL2_rep1 \
+--excludeNonVariants \
+-V /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf -o /home/philipp/glst_merged/link/ecu.vcf
+
+### get HW
+
+/home/philipp/vcftools_0.1.13/bin/vcftools --vcf ecu.vcf --hwe 0.05 ### "After filtering, kept 142 out of a possible 148 Sites"
+
+### get linkage
+
+/home/philipp/vcftools_0.1.13/bin/vcftools --vcf col.vcf --geno-r2 ## Colombia: 0.0277778 0.0740741 0.1948470
+
+/home/philipp/vcftools_0.1.13/bin/vcftools --vcf vz.vcf --geno-r2 ## Venezuela:  0.0222222 0.0857143 0.2696970
+
+/home/philipp/vcftools_0.1.13/bin/vcftools --vcf ecu.vcf --geno-r2 ## Ecuador: 0.0357143 0.1666670 0.3562030
+

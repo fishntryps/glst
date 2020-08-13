@@ -1,0 +1,75 @@
+
+#############################################
+############# somy estimation ###############
+#############################################
+
+### get depth within GLST target regions for replicates 1-4
+
+for i in {1..4}; do samtools depth -b orig_targets.bed TBM_2795_CL2_rep"$i"_sorted_realigned_merged.bam | cut -f1,3 > x"$i".depth_ready; done ### see script #3 for bed file
+
+### open R
+
+library(ggplot2)
+
+### read in read-depths for replicate 1
+
+x1 <- read.table("x1.depth_ready", header=F)
+
+### calculate median read-depth per chromosome
+
+x1_medians <- with(x1, tapply(x1$V2, x1$V1, FUN = median))
+
+### calculate median of chromosomal medians
+
+median_of_x1_medians <- quantile(x1_medians, 0.5)
+
+### normalize to site-wise somy estimates
+
+x1$V3 <- 2*x1$V2/median_of_x1_medians
+x1$V1 <- factor(x1$V1, levels=c('TcX10_chr1','TcX10_chr2','TcX10_chr3','TcX10_chr4','TcX10_chr5','TcX10_chr7','TcX10_chr8','TcX10_chr9','TcX10_chr10','TcX10_chr11','TcX10_chr12','TcX10_chr13','TcX10_chr14','TcX10_chr15','TcX10_chr16','TcX10_chr18','TcX10_chr19','TcX10_chr21','TcX10_chr23','TcX10_chr26','TcX10_chr27','TcX10_chr28','TcX10_chr31','TcX10_chr32','TcX10_chr33','TcX10_chr36','TcX10_chr37','TcX10_chr39','TcX10_chr41','TcX10_chr43','TcX10_chr44'))
+
+### tag replicate
+
+x1$V4 <- "rep1"
+
+### repeat with other replicates
+
+x2 <- read.table("x2.depth_ready", header=F)
+
+x2_medians <- with(x2, tapply(x2$V2, x2$V1, FUN = median))
+median_of_x2_medians <- quantile(x1_medians, 0.5)
+x2$V3 <- 2*x2$V2/median_of_x2_medians
+x2$V1 <- factor(x2$V1, levels=c('TcX10_chr1','TcX10_chr2','TcX10_chr3','TcX10_chr4','TcX10_chr5','TcX10_chr7','TcX10_chr8','TcX10_chr9','TcX10_chr10','TcX10_chr11','TcX10_chr12','TcX10_chr13','TcX10_chr14','TcX10_chr15','TcX10_chr16','TcX10_chr18','TcX10_chr19','TcX10_chr21','TcX10_chr23','TcX10_chr26','TcX10_chr27','TcX10_chr28','TcX10_chr31','TcX10_chr32','TcX10_chr33','TcX10_chr36','TcX10_chr37','TcX10_chr39','TcX10_chr41','TcX10_chr43','TcX10_chr44'))
+x2$V4 <- "rep2"
+
+x3 <- read.table("x3.depth_ready", header=F)
+
+x3_medians <- with(x3, tapply(x3$V2, x3$V1, FUN = median))
+median_of_x3_medians <- quantile(x1_medians, 0.5)
+x3$V3 <- 2*x3$V2/median_of_x3_medians
+x3$V1 <- factor(x3$V1, levels=c('TcX10_chr1','TcX10_chr2','TcX10_chr3','TcX10_chr4','TcX10_chr5','TcX10_chr7','TcX10_chr8','TcX10_chr9','TcX10_chr10','TcX10_chr11','TcX10_chr12','TcX10_chr13','TcX10_chr14','TcX10_chr15','TcX10_chr16','TcX10_chr18','TcX10_chr19','TcX10_chr21','TcX10_chr23','TcX10_chr26','TcX10_chr27','TcX10_chr28','TcX10_chr31','TcX10_chr32','TcX10_chr33','TcX10_chr36','TcX10_chr37','TcX10_chr39','TcX10_chr41','TcX10_chr43','TcX10_chr44'))
+x3$V4 <- "rep3"
+
+x4 <- read.table("x4.depth_ready", header=F)
+
+x4_medians <- with(x4, tapply(x4$V2, x4$V1, FUN = median))
+median_of_x4_medians <- quantile(x1_medians, 0.5)
+x4$V3 <- 2*x4$V2/median_of_x4_medians
+x4$V1 <- factor(x4$V1, levels=c('TcX10_chr1','TcX10_chr2','TcX10_chr3','TcX10_chr4','TcX10_chr5','TcX10_chr7','TcX10_chr8','TcX10_chr9','TcX10_chr10','TcX10_chr11','TcX10_chr12','TcX10_chr13','TcX10_chr14','TcX10_chr15','TcX10_chr16','TcX10_chr18','TcX10_chr19','TcX10_chr21','TcX10_chr23','TcX10_chr26','TcX10_chr27','TcX10_chr28','TcX10_chr31','TcX10_chr32','TcX10_chr33','TcX10_chr36','TcX10_chr37','TcX10_chr39','TcX10_chr41','TcX10_chr43','TcX10_chr44'))
+x4$V4 <- "rep4"
+
+### combine 
+
+tot <- rbind(x1,x2,x3,x4)
+
+### save boxplot of site-wise somy estimates to PDF
+
+somyplot <- ggplot(tot, aes(x=V1, y=V3, fill=V4)) + 
+geom_hline(yintercept=2.5, color='cyan') +
+geom_hline(yintercept=1.5, color='cyan') +
+geom_boxplot(outlier.shape=NA, width=0.7) + scale_y_continuous(limits=c(0, 27)) +
+scale_x_discrete(labels=c('1','2','3','4','5','7','8','9','10','11','12','13','14','15','16','18','19','21','23','26','27','28','31','32','33','36','37','39','41','43','44'), breaks=c('TcX10_chr1','TcX10_chr2','TcX10_chr3','TcX10_chr4','TcX10_chr5','TcX10_chr7','TcX10_chr8','TcX10_chr9','TcX10_chr10','TcX10_chr11','TcX10_chr12','TcX10_chr13','TcX10_chr14','TcX10_chr15','TcX10_chr16','TcX10_chr18','TcX10_chr19','TcX10_chr21','TcX10_chr23','TcX10_chr26','TcX10_chr27','TcX10_chr28','TcX10_chr31','TcX10_chr32','TcX10_chr33','TcX10_chr36','TcX10_chr37','TcX10_chr39','TcX10_chr41','TcX10_chr43','TcX10_chr44'))+ xlab('Chromosome') +
+ylab('Somy') + scale_fill_manual(values=c("#999999", "#FFFFFF","#FFFF00", "#FFFF99", "#FFFFCC")) +
+theme(legend.text=element_text(size=25), axis.text = element_text(size=25), axis.title=element_text(size=25), axis.title.x = element_text(vjust=-1), axis.title.y = element_text(hjust=-1)) 
+ggsave(filename="try2.pdf", plot=somyplot, dpi = 600, width= 46, height=10)
+

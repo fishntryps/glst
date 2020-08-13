@@ -1,0 +1,75 @@
+
+###################################################################
+############# neighbor-joining and network analysis ###############
+###################################################################
+
+cd /home/philipp/glst_merged/tree_and_popart
+
+### quick tree using alternate allele counts at biallelic sites (convert genotypes to 0-1-2 codes, i.e., 0 for 0/0 homozygous reference, 1 for 0/1 heterozygous reference / non-reference and 2 for 1/1 homozygous non-reference)
+
+/home/philipp/vcftools_0.1.13/bin/vcftools --vcf /home/philipp/glst_merged/vcf/GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf --012 --out GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT
+
+### open R
+
+library(data.table)
+library(stringr)
+library(ape)
+library(phangorn)
+
+### read in alternate allele count data
+
+tc <- fread('GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.012', data.table = F)[,-1]
+rownames(tc) <- read.table('GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.012.indv')[,1]
+positions <- read.table('GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.012.pos')
+colnames(tc) <- gsub(' ','',apply(positions, 1, function(x) paste(x, collapse='_')))
+
+### missing data per individual and site
+
+missing.site <- apply(tc, 2, function(x) sum(x==-1))/nrow(tc)
+hist(missing.site)
+
+### keep only those sites that have no missing data, i.e., 'non-missing sites'
+
+tc.filter <- tc[names(missing.site[which(missing.site == 0)])] 
+
+### number of individuals and filtered sites
+
+dim(tc.filter)
+
+### build tree from Euclidean distance matrix and  plot to PDF
+
+nj <- nj(dist(tc.filter))
+pdf("tree_nomiss.pdf", height=5, width=6)
+plot(nj, 'u', cex = 0.7, lab4ut="axial", no.margin=T)
+dev.off()
+
+### exit R 
+
+### create concatenated SNP alignment using all non-missing biallelic + multiallelic sites for network analysis
+
+/home/philipp/vcftools_0.1.13/bin/vcftools --vcf /home/philipp/glst_merged/vcf/GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf --recode --recode-INFO-all --max-missing 1 --out GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD
+
+cat GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.recode.vcf | vcf-to-tab > GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.tab
+
+egrep -v '\*' GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.tab > GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD_nostar.tab
+
+cut -f4- GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD_nostar.tab | head -1 | perl -pe 's/\t/\n/g' | awk '{print "awk \x27\{print \$"NR+3"\}\x27 GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD_nostar.tab > "$0".part.fasta"}' | bash
+
+sed -i 's_/__' *.part.fasta
+sed -i '1 s/$/\&\&\&\&/' *.part.fasta
+sed -i '1 s/^/>/' *.part.fasta
+perl -p -i -e 's/\n//g' *.part.fasta
+perl -p -i -e 's/\&\&\&\&/\n/g' *.part.fasta
+
+### sanity check
+
+ls *.part.fasta | while read i; do grep -v '>' "$i" | wc; done
+
+cat *.part.fasta | perl -pe 's/>/\n>/g' | sed '1d' > GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.fasta
+
+\rm *.part.fasta      
+
+### convert alignment to nexus format for visualization in PopART
+
+/home/philipp/trimal-trimAl/source/trimal -in GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.fasta -nexus -out GLST_MER_WGS_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_NMD.nex
+

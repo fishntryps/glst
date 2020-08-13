@@ -1,0 +1,53 @@
+
+##########################################################
+############## nucleotide diversity (pi) #################
+##########################################################
+
+cd /home/philipp/glst1/repeatability
+
+### Pi in Colombia (only first replicates)
+
+grep CHROM GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | grep -v _rep2 | grep -v _rep3 | grep -v _rep4 | while read i; do
+grep CHROM GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | grep -v _rep2 | grep -v _rep3 | grep -v _rep4 | grep -v $i | while read j; do
+
+echo $i"\t"$j"xxx"
+/home/philipp/bcftools-1.3.1/bcftools query -s "$i","$j" -f '%POS\t[%GT\t]\n' GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$2!=$4' | cat - <(/home/philipp/bcftools-1.3.1/bcftools query -s "$i","$j" -f '%POS\t[%GT\t]\n' GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$3!=$5') | wc -l
+done; done | perl -pe 's/xxx\n/\t/g' | grep -v ECU | grep -v TBM | grep -v VZ | grep -v CLBRE | grep -v SAIM | grep -v CHILE | grep -v ARMA | grep -v PARA | grep -v CHACO | awk '{sum += $3} END {print "Pi COL = "sum/NR}'
+
+### Pi in Venezuela (only first replicates)
+
+/home/philipp/vcftools_0.1.13/bin/vcftools --vcf ../vcf/GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT.vcf --max-missing 1 --recode --recode-INFO-all --out GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD
+
+grep CHROM GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | grep -v _rep2 | grep -v _rep3 | grep -v _rep4 | while read i; do
+grep CHROM GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | grep -v _rep2 | grep -v _rep3 | grep -v _rep4 | grep -v $i | while read j; do
+
+echo $i"\t"$j"xxx"
+/home/philipp/bcftools-1.3.1/bcftools query -s "$i","$j" -f '%POS\t[%GT\t]\n' GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$2!=$4' | cat - <(/home/philipp/bcftools-1.3.1/bcftools query -s "$i","$j" -f '%POS\t[%GT\t]\n' GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$3!=$5') | wc -l
+done; done | perl -pe 's/xxx\n/\t/g' | grep -v ECU | grep -v TBM | grep -v COL | grep -v CLBRE | grep -v SAIM | grep -v CHILE | grep -v ARMA | grep -v PARA | grep -v CHACO | awk '{sum += $3} END {print "Pi VZ = "sum/NR}'
+
+### Pi in Ecuador (only first replicates)
+
+grep CHROM GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | grep -v _rep2 | grep -v _rep3 | grep -v _rep4 | while read i; do
+grep CHROM GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | grep -v _rep2 | grep -v _rep3 | grep -v _rep4 | grep -v $i | while read j; do
+
+echo $i"\t"$j"xxx"
+/home/philipp/bcftools-1.3.1/bcftools query -s "$i","$j" -f '%POS\t[%GT\t]\n' GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$2!=$4' | cat - <(/home/philipp/bcftools-1.3.1/bcftools query -s "$i","$j" -f '%POS\t[%GT\t]\n' GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | sed 's_/_\t_g' | awk '$3!=$5') | wc -l
+done; done | perl -pe 's/xxx\n/\t/g' | grep -v VZ | grep -v COL | grep -v CLBRE | grep -v SAIM | grep -v CHILE | grep -v ARMA | grep -v PARA | grep -v CHACO | awk '{sum += $3} END {print "Pi ECU = "sum/NR}'
+
+### sanity check
+
+grep CHROM GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | grep -v _rep2 | grep -v _rep3 | grep -v _rep4 | while read i; do
+grep CHROM GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | grep -v _rep2 | grep -v _rep3 | grep -v _rep4 | grep -v $i | while read j; do
+
+echo $i"\t"$j"xxx";done;done | grep -v ECU | grep -v TBM | grep -v COL | grep -v CLBRE | grep -v SAIM | grep -v CHILE | grep -v ARMA | grep -v PARA | grep -v CHACO
+
+grep CHROM GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | grep -v _rep2 | grep -v _rep3 | grep -v _rep4 | while read i; do
+grep CHROM GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | grep -v _rep2 | grep -v _rep3 | grep -v _rep4 | grep -v $i | while read j; do
+
+echo $i"\t"$j"xxx";done;done | grep -v VZ | grep -v COL | grep -v CLBRE | grep -v SAIM | grep -v CHILE | grep -v ARMA | grep -v PARA | grep -v CHACO
+
+grep CHROM GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | grep -v _rep2 | grep -v _rep3 | grep -v _rep4 | while read i; do
+grep CHROM GLST_CRUZI_DP10_MQ40_GT10_FS12_Q27_OPS_HET1_INT_NMD.recode.vcf | perl -pe 's/\t/\n/g' | sed '1,9d' | grep -v _rep2 | grep -v _rep3 | grep -v _rep4 | grep -v $i | while read j; do
+
+echo $i"\t"$j"xxx";done;done | grep -v ECU | grep -v TBM | grep -v VZ | grep -v CLBRE | grep -v SAIM | grep -v CHILE | grep -v ARMA | grep -v PARA | grep -v CHACO
+

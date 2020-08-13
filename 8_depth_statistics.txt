@@ -1,0 +1,54 @@
+
+#####################################################
+############## read-depth statistics ################
+#####################################################
+
+### paired end reads, but this includes barcode-sharing 16S
+
+cd /shared2/salmosim/philipp/glst1
+
+ls -1rt *R1_001.fq.gz | while read i; do zcat "$i" | wc -l | awk '{print $0/4"\t'$i'"}'; done | sort -rnk1,1
+
+### list genotype depths including zero-depth (i.e., missing) genotypes
+
+egrep './.:[0-9,]{1,9}:[0-9]{1,9}:' /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf -o | sed 's/\:$//g' | sed 's/.*\:.*\://g' > gt_dp.txt 
+
+### or excluding zero-depth genotypes
+
+egrep '[0-3]/[0-3]:[0-9,]{1,9}:[0-9]{1,9}:' /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf -o | sed 's/\:$//g' | sed 's/.*\:.*\://g' > gt_dp_nozero.txt 
+
+### open R and read in genotype depths
+
+x <- read.table("gt_dp.txt", header=F)
+
+### get median
+
+median(x$V1)
+
+### plot histogram of genotype read-depths to PDF
+
+pdf("gt_depth_hist.pdf", width=6, height=4)
+hist(x$V1, breaks = 300, xaxt='n', xlim=c(0,1600), ylim=c(0,2500), yaxt='n', xlab='')
+axis(1, at = c(0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600), tck = -0.018, labels = rep("",17))
+axis(1, at = c(0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600), lwd=0, labels = c("0", "100", "200", "300", "400", "500", "600", "700", "800", "900", "1000", "1100", "1200", "1300", "1400", "1500", "1600"), line=-0.61, cex.axis=0.85)
+axis(2, at = c(0, 500, 1000, 1500, 2000, 2500), tck = -0.018, labels = rep("",6))
+axis(2, at = c(0, 500, 1000, 1500, 2000, 2500), lwd=0, labels = c("0", "500", "1000", "1500", "2000", "2500"), line=-0.39, las=1, cex.axis=0.85)
+dev.off()
+
+### exit R
+
+### target region read-depth from sequencing run 1 vs. sequencing run 2
+
+samtools depth ../glst2/TBM_2795_CL2_rep1_PURE_outputs/TBM_2795_CL2_rep1_PURE_sorted_realigned.bam > depth2_rep1.txt
+samtools depth ../glst1/TBM_2795_CL2_rep1_PURE_outputs/TBM_2795_CL2_rep1_PURE_sorted_realigned.bam > depth1_rep1.txt
+sed -re 's/(chr[0-9]{1,2})\t/\1x/g' depth2_rep1.txt | sort -k1,1 > depth2b_rep1.txt 
+sed -re 's/(chr[0-9]{1,2})\t/\1x/g' depth1_rep1.txt | sort -k1,1 > depth1b_rep1.txt 
+awk -F "\t" 'BEGIN{OFS="\t"} {if (NR==FNR) {a[$1]=$2; next} if ($1 in a) {print $1, $2, $3, a[$1]}}' depth2b_rep1.txt depth1b_rep1.txt > depth_comp_rep1.txt
+scp depth_comp_rep1.txt philipp@getafix.mvls.gla.ac.uk:/home/philipp/glst1/yield/
+
+### plot correlation to PDF
+
+pdf("gt_depth_hist.pdf", width=6, height=4)
+plot(y = sqrt(x$V3), x= sqrt(x$V2), pch=19, cex=0.3, col="purple", xlab='sqrt read depth seq. run 1', ylab='sqrt read depth seq. run 2')
+dev.off()
+

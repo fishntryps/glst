@@ -1,0 +1,133 @@
+
+##################################################
+############# SNP yield statistics ###############
+##################################################
+
+### SNPs found within tartet regions before filtering
+
+bedtools intersect -a /home/philipp/glst_merged/vcf/GLST_CRUZI_OPS.vcf -b orig_targets.bed -header | grep -vc '#' | awk '{print "pre-filtering: SNPs found within target regions: "$0}' ### see script #5 for VCF and script #3 for bed file
+
+### target SNPs found in samples before filtering
+
+bedtools intersect -a /home/philipp/glst_merged/vcf/GLST_CRUZI_OPS.vcf -b orig_targets.vcf -header | grep -vc '#' | awk '{print "pre-filtering: Target SNPs found: "$0}' ### see script #3 for second VCF
+
+### SNPs found within target regions after filtering
+
+bedtools intersect -a /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf -b orig_targets.bed -header | uniq | grep -vc '#' | awk '{print "post-filtering: Target SNPs found: "$0}'
+
+### target SNPs found in samples after filtering
+
+bedtools intersect -a /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf -b orig_targets.vcf -header | uniq | grep -vc '#' | awk '{print "post-filtering: Target SNPs found: "$0}'
+
+### SNPs found within target regions after filtering (only TcI)
+
+java -jar /home/philipp/GenomeAnalysisTK.jar -T SelectVariants -R /home/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta \
+--excludeNonVariants \
+-sn CHILE_C22 \
+-sn COL133_rep1 \
+-sn COL133_rep2 \
+-sn COL135_rep1 \
+-sn COL135_rep2 \
+-sn COL154_rep1 \
+-sn COL154_rep2 \
+-sn COL155_rep1 \
+-sn COL155_rep2 \
+-sn COL169 \
+-sn COL319_rep1 \
+-sn COL319_rep2 \
+-sn COL466_rep1 \
+-sn COL466_rep2 \
+-sn COL466_rep3 \
+-sn COL468_rep1 \
+-sn COL468_rep2 \
+-sn COL468_rep3 \
+-sn COL77 \
+-sn COL78_rep1 \
+-sn COL78_rep2 \
+-sn ECU10_rep1 \
+-sn ECU10_rep2 \
+-sn ECU36 \
+-sn ECU3_rep1 \
+-sn ECU3_rep2 \
+-sn ECU41 \
+-sn ECU4_rep1 \
+-sn ECU4_rep2 \
+-sn ECU77 \
+-sn ECU8 \
+-sn ECU9_rep1 \
+-sn ECU9_rep2 \
+-sn TBM_2795_CL2_rep1 \
+-sn TBM_2795_CL2_rep2 \
+-sn TBM_2795_CL2_rep3 \
+-sn TBM_2795_CL2_rep4 \
+-sn VZ1016B_rep1 \
+-sn VZ1016B_rep2 \
+-sn VZ1214D \
+-sn VZ13516_rep1 \
+-sn VZ13516_rep2 \
+-sn VZ16816 \
+-sn VZ17114 \
+-sn VZ35814_rep1 \
+-sn VZ35814_rep2 \
+-sn VZ6616_rep1 \
+-sn VZ6616_rep2 \
+-o /home/philipp/glst_merged/yield/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_tc1.vcf \
+--variant /home/philipp/glst_merged/vcf/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf 
+
+bedtools intersect -a GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_tc1.vcf -b orig_targets.bed -header | uniq | grep -vc '#' | awk '{print "post-filtering: Target SNPs found: "$0}' ### post-filtering: SNPs found within target regions: 780
+
+### SNPs FOUND WITHIN TARGET REGIONS after filtering for sample TBM_2795_CL2 repeats vs. WGS sample
+
+bedtools intersect -a /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf -b /shared2/salmosim/philipp/glst_cruzi_trim/gatk_filtered/orig_targets.vcf -header | uniq | grep -vc
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T SelectVariants -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta \
+--excludeNonVariants \
+-sn TBM_2795_CL2_rep1 \
+-sn TBM_2795_CL2_rep2 \
+-sn TBM_2795_CL2_rep3 \
+-sn TBM_2795_CL2_rep4 \
+-o /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_TBM_2795_CL2.vcf \
+--variant /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT.vcf 
+
+java -jar /home/opt/GenomeAnalysisTK-3.7-0/GenomeAnalysisTK.jar -T SelectVariants -R /shared2/salmosim/philipp/scripts/compile_reference_from_genbank/TriTrypDB-32_TcruziSylvioX10-1_Genome.fasta \
+--excludeNonVariants \
+-sn TBM_2795_CL2 \
+-o /shared2/salmosim/philipp/glst_merged/gatk_filtered/orig_targets_TBM_2795_CL2.vcf \
+--variant /shared2/salmosim/philipp/glst_cruzi_trim/gatk_filtered/orig_targets.vcf 
+
+bedtools intersect -a /shared2/salmosim/philipp/glst_merged/gatk_filtered/GLST_MER_DP10_MQ20_GT10_FS10_Q80_OPS_HET1_omit_INT_TBM_2795_CL2.vcf -b /shared2/salmosim/philipp/glst_merged/gatk_filtered/orig_targets_TBM_2795_CL2.vcf -header | uniq | grep -vc '#' | awk '{print "post-filtering: Target SNPs found: "$0}'
+
+### target SNP loci mapped, per sample
+
+grep -v '#' orig_targets.vcf | awk '{print $1"\t"$2"\t"$2}' > orig_targets_snps.bed
+
+ls -1 /home/philipp/glst_merged/bam/*merged.bam | sed 's/_sorted.*//g' | sed 's_.*/__g' | while read i; do echo "$i"xxx; bedtools intersect -a orig_targets_snps.bed -b /home/philipp/glst_merged/bam/"$i"_sorted_realigned_merged.bam | uniq | cut -f1,2 | wc | awk '{print $1}'; done | perl -pe 's/xxx\n/\t/g' | sort -k2,2 | sort -Vk2,2 | sed 1i'Sample\tTarget SNP loci mapped' > TAR_COV.txt
+
+### min
+
+head -2 TAR_COV.txt | tail -1 
+
+### max
+
+tail -1 TAR_COV.txt
+
+### off target percentage, per sample
+
+ls -1 /home/philipp/glst_merged/bam/*realigned_merged.bam | sed 's/_sorted.*//g' | sed 's_.*/__g' | while read i; do bedtools bamtobed -i /home/philipp/glst_merged/bam/"$i"_sorted_realigned_merged.bam > "$i"_mapread.bed; bedtools subtract -a "$i"_mapread.bed -b orig_targets.bed -A | wc -l; done > off_target_aligned.txt
+
+ls -1 /home/philipp/glst_merged/bam/*realigned_merged.bam | sed 's/_sorted.*//g' | sed 's_.*/__g' | while read i; do wc -l "$i"_mapread.bed; done > aligned_reads.txt
+
+paste off_target_aligned.txt aligned_reads.txt  | sed 's/ /\t/g' | awk '{print $3"\t"$1/$2}' | sed 's/_mapread.bed//g' | sort -nk2,2 | sed 1i'Sample\tRead fraction off-target' > OFF_READS.txt
+
+### min
+
+head -2 OFF_READS.txt | tail -1 
+
+### max
+
+tail -1 OFF_READS.txt
+
+\rm off_target_aligned.txt
+\rm aligned_reads.txt
+\rm *_mapread.bed
+
